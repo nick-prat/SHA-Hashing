@@ -9,7 +9,7 @@
 #include <vector>
 #include <sstream>
 
-constexpr std::array<unsigned int, 64> sha256kConstants{
+constexpr std::array<unsigned int, 64> sha256kConstants {
     { 0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
     0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -20,7 +20,7 @@ constexpr std::array<unsigned int, 64> sha256kConstants{
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2 }
 };
 
-constexpr std::array<unsigned int, 8> sha256hValues{
+constexpr std::array<unsigned int, 8> sha256hValues {
     { 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 }
 };
 
@@ -77,6 +77,22 @@ unsigned int s1(unsigned int x) {
     return rotateRight(x, 17) ^ rotateRight(x, 19) ^ (x >> 10);
 }
 
+void sha256Compression(std::array<unsigned int, 8>& registers, const std::array<unsigned int, 64>& mQueue) {
+    unsigned int temp1, temp2;
+    for(int j = 0; j < 64; j++) {
+        temp1 = registers[7] + S1(registers[4]) + ch(registers[4], registers[5], registers[6]) + sha256kConstants[j] + mQueue[j];
+        temp2 = S0(registers[0]) + maj(registers[0], registers[1], registers[2]);
+        registers[7] = registers[6];
+        registers[6] = registers[5];
+        registers[5] = registers[4];
+        registers[4] = registers[3] + temp1;
+        registers[3] = registers[2];
+        registers[2] = registers[1];
+        registers[1] = registers[0];
+        registers[0] = temp1 + temp2;
+    }
+}
+
 std::string sha256(const std::vector<char>& message) {
     unsigned long mLength = message.size();
     unsigned long mLengthBits = mLength * 8;
@@ -101,20 +117,7 @@ std::string sha256(const std::vector<char>& message) {
         }
 
         std::array<unsigned int, 8> registers{hValues};
-        unsigned int temp1, temp2;
-
-        for(int j = 0; j < 64; j++) {
-            temp1 = registers[7] + S1(registers[4]) + ch(registers[4], registers[5], registers[6]) + sha256kConstants[j] + mQueue[j];
-            temp2 = S0(registers[0]) + maj(registers[0], registers[1], registers[2]);
-            registers[7] = registers[6];
-            registers[6] = registers[5];
-            registers[5] = registers[4];
-            registers[4] = registers[3] + temp1;
-            registers[3] = registers[2];
-            registers[2] = registers[1];
-            registers[1] = registers[0];
-            registers[0] = temp1 + temp2;
-        }
+        sha256Compression(registers, mQueue);
 
         for(int j = 0; j < 8; j++) {
             hValues[j] = registers[j] + hValues[j];
@@ -153,26 +156,13 @@ std::string sha224(const std::vector<char>& message) {
         }
 
         std::array<unsigned int, 8> registers{hValues};
-        unsigned int temp1, temp2;
-
-        for(int j = 0; j < 64; j++) {
-            temp1 = registers[7] + S1(registers[4]) + ch(registers[4], registers[5], registers[6]) + sha256kConstants[j] + mQueue[j];
-            temp2 = S0(registers[0]) + maj(registers[0], registers[1], registers[2]);
-            registers[7] = registers[6];
-            registers[6] = registers[5];
-            registers[5] = registers[4];
-            registers[4] = registers[3] + temp1;
-            registers[3] = registers[2];
-            registers[2] = registers[1];
-            registers[1] = registers[0];
-            registers[0] = temp1 + temp2;
-        }
+        sha256Compression(registers, mQueue);
 
         for(int j = 0; j < 8; j++) {
             hValues[j] = registers[j] + hValues[j];
         }
     }
-    
+
     std::stringstream ss;
     for(int i = 0; i < 7; i++) {
         ss << std::hex << std::setw(8) << std::setfill('0') << hValues[i];
